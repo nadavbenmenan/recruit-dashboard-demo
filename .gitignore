@@ -1,0 +1,18 @@
+# חוסם כל נתון אמת מלהיכנס למאגר הפומבי
+*.db
+*.sqlite
+*.sqlite3
+*.xlsx
+*.xls
+*.csv
+*.docx
+~$*
+__pycache__/
+*.pyc
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+# חומרי עבודה פנימיים — לא לפרסום
+תוכנית_עבודה.md

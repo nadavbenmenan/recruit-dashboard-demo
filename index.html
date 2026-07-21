@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>דשבורד ניהול גיוס — הדגמה</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="demo-banner">🔒 <b>הדגמה — נתונים סינתטיים לחלוטין.</b> האתר לקריאה בלבד: אין טעינה, עריכה או ייצוא. המספרים מומצאים ואינם משקפים נתוני אמת.</div>
+<header>
+  <h1>מאגר נתוני גיוס — לוח בקרה</h1>
+  <div class="sub">כל הפקה נשמרת כאקסל RTL בתיקיית <b>תוצאות/</b> · שליפות נפתחות לקריאה בלבד</div>
+  <!-- v4.7 — תאריכי עדכון הקבצים. בכותרת ולא בתוך מסך מסוים: זו התשובה
+       ל"עד מתי הנתונים מעודכנים", והיא רלוונטית לכל מסך במערכת. -->
+  <div class="upd" id="upd"></div>
+</header>
+
+<div class="nav">
+  <button class="act" disabled title="זמין בגרסת השרת המלאה">⭳ טען נתונים</button>
+  <button id="tab-manager" class="on" onclick="show('manager')">דוח בקרה מנהל</button>
+  <button id="tab-dyn"     onclick="show('dyn')">דשבורד דינאמי</button>
+  <button id="tab-reports" onclick="show('reports')">הפק דוחות קבועים</button>
+  <button id="tab-fc"      onclick="show('fc')">צפי להליך המיון</button>
+  <button id="tab-wd"      onclick="show('wd')">מסירי מועמדות</button>
+  <button id="tab-st"      onclick="show('st')">הפסקות הליך</button>
+</div>
+
+<div class="wrap">
+  <!-- ========== דוח בקרה מנהל ========== -->
+  <div id="v-manager">
+    <h2>מצב ההליך כרגע <span class="fstate" id="mgrSub">— ללא סינון, תמונת המאגר המלאה</span></h2>
+    <div class="kpis" id="mgrKpis"><div class="tile"><div class="lbl">טוען…</div></div></div>
+    <h2>אחוזי חריגה לפי יחידה — 5 השלבים</h2>
+    <div class="row2">
+      <div class="card" style="flex:1 1 340px"><table class="t" id="mgrDist"><tbody><tr><td>טוען…</td></tr></tbody></table></div>
+      <div class="card" style="flex:1 1 340px">
+        <div style="font-size:13px;color:#9fb3d4;line-height:1.8">
+          המספרים הגדולים בראש המסך: סך המועמדים בהליך, וחלוקתם ל-5 טווחי הסטטוס
+          עם כמות הממתינים מעל 60 יום בכל טווח.
+          <br><br><b>הטבלה:</b> לכל יחידה, אחוז המועמדים החורגים בכל אחד מ-5 השלבים.
+          <br><b>X של כל שלב הוא החציון ההיסטורי</b> של משך אותו שלב — כלומר מחצית
+          מהמועמדים עברו אותו בזמן הזה. הוא מחושב מחדש בכל רענון, ולכן נע עם הנתונים.
+          <br>צבעים: ירוק פחות מ-10% חורגים · צהוב 10%–25% · אדום מעל 25%. '—' = אין ממתינים בשלב.
+          <br><b>המספר בסוגריים הוא כמות הממתינים בשלב</b> — קרא אותו לפני האחוז:
+          '100% (1)' הוא מועמד אחד, לא תופעה.
+          <br><br><b>מגבלה:</b> החציון נמדד על מי שכבר השלים את השלב — מטבעו המהיר — בעוד
+          הממתינים כרגע הם בהגדרה האיטיים. אחוז גבוה מעיד על עומס אמיתי, אך אינו שיעור מוחלט.
+        </div>
+        <div style="margin-top:14px"><span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ הפק לאקסל</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== דשבורד דינאמי ========== -->
+  <div id="v-dyn" style="display:none">
+    <div id="ctl-dyn"></div>
+    <h2>מסננים נוספים <span id="fstate" class="fstate"></span></h2>
+    <div class="fbox" id="fbox">טוען…</div>
+    <h2>מצב לפי הסינון</h2>
+    <div class="kpis" id="dynKpis"></div>
+    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+      <span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ ייצוא ממוקד (שמי)</span>
+      <span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ ייצוא מלא (שמי + דשבורד)</span>
+      <span class="note">הייצוא המלא: גיליון 1 — רשימת המועמדים, גיליון 2 — המספרים שעל המסך.</span>
+    </div>
+    <h2>פעילים לפי מחוז (מסונן)</h2>
+    <div class="card"><table class="t" id="dynDist"></table></div>
+  </div>
+
+  <!-- ========== דוחות קבועים ========== -->
+  <div id="v-reports" style="display:none">
+    <h2>הפקת דוחות</h2>
+    <div class="note" style="margin-bottom:12px">
+      <b>ייצוא לפי מחוז</b> ו<b>דוח חריגות</b> נשלפים מאותה אוכלוסייה שבדשבורד הדינאמי, ולכן <b>כל</b> המסננים חלים
+      עליהם — כולל ימי המתנה ושלב — והמספרים בהם זהים למסך.<br>
+      <b>שני דוחות הזמנים</b> כוללים גם מי שכבר גויס או הופסק (הם אינם "בהליך פעיל"), ולכן חלים עליהם
+      <b>תפקיד ומחוז בלבד</b>. זה מכוון: סינון לפי שלב היה מוחק מהם את כל מי שסיים.
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- ========== צפי ========== -->
+  <div id="v-fc" style="display:none">
+    <h2>צפי להליך המיון — 4 שבועות קדימה</h2>
+    <div class="warn">
+      <b>זהו חיזוי, לא נתון.</b> נגזר משיעורי מעבר קבועים (24% → 72% → 83% → 95% → 100% → 80%)
+      ומחציוני הזמן ההיסטוריים. המספר הוא <b>תוחלת</b> — סכום הסתברויות ולא ספירת ראשים,
+      ולכן ערך שאינו שלם הוא תקין.
+      <br><b>מועמדים ב'הגשה בלבד' אינם בחיזוי כלל</b> — הם טרם נכנסו להליך ואין עליהם נתוני זמן.
+      החיזוי מתחיל מ'בדיקת קבצים'.
+    </div>
+    <div id="fcBox">טוען…</div>
+  </div>
+
+  <!-- ========== מסירי מועמדות / הפסקות הליך ========== -->
+  <div id="v-wd" style="display:none"><div id="wdHost"></div></div>
+  <div id="v-st" style="display:none"><div id="stHost"></div></div>
+</div>
+
+<div id="toast"></div>
+<div class="modal" id="modal"><div class="inner" id="modalInner"></div></div>
+<script src="app.js"></script>
+</body>
+</html>
