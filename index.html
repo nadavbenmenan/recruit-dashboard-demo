@@ -29,27 +29,12 @@
 <div class="wrap">
   <!-- ========== דוח בקרה מנהל ========== -->
   <div id="v-manager">
-    <h2>מצב ההליך כרגע <span class="fstate" id="mgrSub">— ללא סינון, תמונת המאגר המלאה</span></h2>
+    <h2>מצב ההליך כרגע <span class="fstate" id="mgrSub"></span></h2>
     <div class="kpis" id="mgrKpis"><div class="tile"><div class="lbl">טוען…</div></div></div>
-    <h2>אחוזי חריגה לפי יחידה — 5 השלבים</h2>
-    <div class="row2">
-      <div class="card" style="flex:1 1 340px"><table class="t" id="mgrDist"><tbody><tr><td>טוען…</td></tr></tbody></table></div>
-      <div class="card" style="flex:1 1 340px">
-        <div style="font-size:13px;color:#9fb3d4;line-height:1.8">
-          המספרים הגדולים בראש המסך: סך המועמדים בהליך, וחלוקתם ל-5 טווחי הסטטוס
-          עם כמות הממתינים מעל 60 יום בכל טווח.
-          <br><br><b>הטבלה:</b> לכל יחידה, אחוז המועמדים החורגים בכל אחד מ-5 השלבים.
-          <br><b>X של כל שלב הוא החציון ההיסטורי</b> של משך אותו שלב — כלומר מחצית
-          מהמועמדים עברו אותו בזמן הזה. הוא מחושב מחדש בכל רענון, ולכן נע עם הנתונים.
-          <br>צבעים: ירוק פחות מ-10% חורגים · צהוב 10%–25% · אדום מעל 25%. '—' = אין ממתינים בשלב.
-          <br><b>המספר בסוגריים הוא כמות הממתינים בשלב</b> — קרא אותו לפני האחוז:
-          '100% (1)' הוא מועמד אחד, לא תופעה.
-          <br><br><b>מגבלה:</b> החציון נמדד על מי שכבר השלים את השלב — מטבעו המהיר — בעוד
-          הממתינים כרגע הם בהגדרה האיטיים. אחוז גבוה מעיד על עומס אמיתי, אך אינו שיעור מוחלט.
-        </div>
-        <div style="margin-top:14px"><span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ הפק לאקסל</span></div>
-      </div>
-    </div>
+    <div id="mgrBars"></div>
+    <h2>אחוזי חריגה לפי יחידה</h2>
+    <div class="card"><table class="t" id="mgrDist"><tbody><tr><td>טוען…</td></tr></tbody></table></div>
+    <div style="margin-top:14px"><span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ הפק לאקסל</span></div>
   </div>
 
   <!-- ========== דשבורד דינאמי ========== -->
@@ -59,6 +44,7 @@
     <div class="fbox" id="fbox">טוען…</div>
     <h2>מצב לפי הסינון</h2>
     <div class="kpis" id="dynKpis"></div>
+    <div id="dynBars"></div>
     <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
       <span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ ייצוא ממוקד (שמי)</span>
       <span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ ייצוא מלא (שמי + דשבורד)</span>

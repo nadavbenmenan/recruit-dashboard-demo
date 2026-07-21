@@ -111,7 +111,9 @@ function computeKpi(f){
       in_range[b]=n; breach[b]= n? Math.round(1000*sub.filter(c=>c.days>t).length/n)/10 : null; }
     return {district:d, active, avg_days:avg, breach, in_range};
   }).sort((a,b)=>b.active-a.active);
-  return { total, ranges, districts, stuck90,
+  const roleC={}; rows.forEach(c=>{ roleC[c.role]=(roleC[c.role]||0)+1; });
+  const by_role=Object.keys(roleC).map(r=>({role:r,count:roleC[r]})).sort((a,b)=>b.count-a.count);
+  return { total, ranges, districts, by_role, stuck90,
            facets:{ roles:_kpiFacet(f,'roles','role'), districts:_kpiFacet(f,'districts','district'),
                     mode:_modeFacet(f) },
            bounds:BOUNDS };
@@ -540,8 +542,9 @@ function distTable(rows, ranges){
   const rs = ranges||[];
   // הכותרת נושאת את X של כל טווח. בלעדיו '27%' הוא מספר בלי אמת מידה.
   let d='<thead><tr><th>יחידה</th><th>פעילים</th><th>ממוצע ימים</th>';
-  rs.forEach(r=>{ d+=`<th class="num" title="${esc(r.name)} — חריגה מעל ${r.target} ימים">`+
-    `${r.no}<div style="font-size:9.5px;color:#6f83a6;font-weight:400">מעל ${r.target} י'</div></th>`; });
+  rs.forEach(r=>{ d+=`<th class="num rngh" title="${esc(r.name)} — חריגה מעל ${r.target} ימים">`+
+    `<div class="rngn">${esc(r.name)}</div>`+
+    `<div style="font-size:9px;color:#6f83a6;font-weight:400">מעל ${r.target} י'</div></th>`; });
   d+='</tr></thead><tbody>';
   rows.forEach(x=>{
     d+=`<tr><td>${esc(x.district)}</td><td class="num">${nf(x.active)}</td><td class="num">${x.avg_days??''}</td>`;
@@ -560,10 +563,36 @@ function distTable(rows, ranges){
   });
   return d+'</tbody>';
 }
+// ---- גרפי עמודות: חלוקה למקצועות / אגפים / טווחי זמן (חלק ה', נדב) ----
+// מוצגים זה מעל זה ומתעדכנים בכל פעולה. אותה קומפוננטה בכל המסכים.
+function barCard(title, rows, labelKey, valKey){
+  const max=Math.max(1, ...rows.map(r=>+r[valKey]||0));
+  let h=`<div class="card barcard"><div class="bartitle">${esc(title)}</div><table class="t bars"><tbody>`;
+  rows.forEach((r,i)=>{ const v=+r[valKey]||0, c=RANGE_COLORS[i%RANGE_COLORS.length];
+    h+=`<tr><td class="blab" title="${esc(String(r[labelKey]))}">${esc(String(r[labelKey]))}</td>`+
+       `<td class="bwrap"><div class="bbar" style="width:${(100*v/max).toFixed(1)}%;background:${c}"></div></td>`+
+       `<td class="num bval">${nf(v)}</td></tr>`; });
+  return h+'</tbody></table></div>';
+}
+function kpiBars(k){
+  const byUnit=(k.districts||[]).map(x=>({name:x.district,count:x.active}));
+  const byRange=(k.ranges||[]).map(x=>({name:x.name,count:x.candidates}));
+  return `<div class="barstack">
+    ${barCard('חלוקה למקצועות', k.by_role||[], 'role','count')}
+    ${barCard('חלוקה לאגפים', byUnit, 'name','count')}
+    ${barCard('חלוקה לטווחי זמן', byRange, 'name','count')}</div>`;
+}
+function evBars(d){
+  return `<div class="barstack">
+    ${barCard('חלוקה למקצועות', d.by_role||[], 'role','events')}
+    ${barCard('חלוקה לאגפים', d.by_district||[], 'district','events')}
+    ${barCard('חלוקה לשלב באירוע', d.by_stage||[], 'stage','events')}</div>`;
+}
 async function loadManager(){
   const k=await (await fetch('/api/kpi',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({filters:{}})})).json();
   document.getElementById('mgrKpis').innerHTML=tiles(k);
+  document.getElementById('mgrBars').innerHTML=kpiBars(k);
   document.getElementById('mgrDist').innerHTML=distTable(k.districts, k.ranges);
   // 'כרגע' חייב להיות מלווה בתאריך: המסך מציג את דוח 'פעילים', וזה תצלום.
   // בלי התאריך המשתמש קורא תמונה של אתמול כאילו היא של היום.
@@ -587,6 +616,7 @@ async function loadDyn(){
   const k=await (await fetch('/api/kpi',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({filters:filters()})})).json();
   document.getElementById('dynKpis').innerHTML=tiles(k);
+  document.getElementById('dynBars').innerHTML=kpiBars(k);
   document.getElementById('dynDist').innerHTML=distTable(k.districts, k.ranges);
   if(k.facets){ dynFacets(k.facets); paintModeCounts('dyn', k.facets); }
   ctlBounds('dyn', k.bounds);
@@ -668,6 +698,7 @@ async function loadEvents(v){
         <span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ ייצוא שמי</span>
         <span class="act-btn dis" title="זמין בגרסת השרת המלאה">⭳ ייצוא מלא (שמי + דשבורד)</span>
       </div>
+      <div id="${v}Bars"></div>
       <div class="row2" style="margin-top:16px">
         <div class="card" style="flex:1 1 300px"><h2 style="margin-top:0">לפי שלב</h2><table class="t" id="${v}TabStage"></table></div>
         <div class="card" style="flex:1 1 300px"><h2 style="margin-top:0">לפי מחוז</h2><table class="t" id="${v}TabDist"></table></div>
@@ -711,6 +742,7 @@ async function evReload(v){
       <div class="foot">${pct}% מהאירועים${d.dedup?'':' · '+nf(r.people)+' מועמדים'}</div>
       <div class="bar"><i style="width:${pct}%;background:${c}"></i></div></div>`; });
   document.getElementById(v+'Kpis').innerHTML=h;
+  document.getElementById(v+'Bars').innerHTML=evBars(d);
   const tab=(rows,key,label)=>{
     let t=`<thead><tr><th>${label}</th><th>אירועים</th>${d.dedup?'':'<th>מועמדים</th>'}</tr></thead><tbody>`;
     rows.forEach(r=>{ t+=`<tr><td>${r[key]}</td><td class="num">${nf(r.events)}</td>${d.dedup?'':`<td class="num">${nf(r.people)}</td>`}</tr>`; });
@@ -807,6 +839,28 @@ async function doIngest(btn){
 }
 
 
+
+// ---------- צפי הדגמה: שורה לכל שלב, צמיחה חזויה 10%-15% (בלי קשר לנתוני אמת) ----------
+function loadForecast(){
+  const stages=META.forecast_stages, g=META.forecast_growth;
+  const base={}; META.forecast_base.forEach(r=>{ base[r.stage]=(base[r.stage]||0)+r.count; });
+  const warn=document.querySelector('#v-fc .warn');
+  if(warn) warn.innerHTML='<b>צפי הדגמה.</b> המודל מציג צמיחה חזויה של 10%–15% בכל שלב לאורך 4 שבועות — בלי קשר לנתוני אמת. הערך הוא תוחלת.';
+  let h='<div class="card"><table class="t"><thead><tr><th>שלב</th><th class="num">נוכחי</th>'+
+        '<th class="num">שבוע 1</th><th class="num">שבוע 2</th><th class="num">שבוע 3</th><th class="num">שבוע 4</th>'+
+        '<th class="num">צפי עלייה</th></tr></thead><tbody>';
+  stages.forEach((s,i)=>{
+    const now=base[s]||0, gr=g[s]||0.12, c=RANGE_COLORS[i%RANGE_COLORS.length];
+    // עלייה חזויה של gr (10%-15%) על פני 4 שבועות — רמפה לינארית עד היעד.
+    let cells='';
+    for(let w=1;w<=4;w++){ cells+=`<td class="num">${nf(Math.round(now*(1+gr*w/4)))}</td>`; }
+    const pct=Math.round(gr*100);
+    h+=`<tr><td><span class="dot" style="background:${c};margin-left:6px"></span>${esc(s)}</td>`+
+       `<td class="num">${nf(now)}</td>${cells}`+
+       `<td class="num" style="color:#3fae6e;font-weight:700">+${pct}%</td></tr>`;
+  });
+  document.getElementById('fcBox').innerHTML=h+'</tbody></table></div>';
+}
 
 // ---------- נטרול פעולות כתיבה (קריאה בלבד) ----------
 function doIngest(){ toast('טעינת נתונים זמינה בגרסת השרת המלאה'); }

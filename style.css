@@ -91,6 +91,19 @@
                  color:#e8edf5; padding:4px 6px; font-family:inherit; font-size:12px; }
   .dates input:focus { outline:none; border-color:#4F8EF7; }
   .bar > i { display:block; height:100%; background:#4F8EF7; }
+  /* גרפי עמודות — חלוקה למקצוע/אגף/טווח, זה מעל זה (חלק ה') */
+  .barstack { display:flex; flex-direction:column; gap:12px; margin:6px 0 4px; }
+  .barcard { padding:12px 16px; }
+  .bartitle { font-size:13px; font-weight:700; color:#cfe0f7; margin-bottom:8px;
+              border-right:3px solid #4F8EF7; padding-right:9px; }
+  table.bars { width:100%; }
+  table.bars td { border:none; padding:3px 4px; vertical-align:middle; }
+  td.blab { width:120px; max-width:120px; color:#cfe0f7; font-size:12px; white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis; }
+  .bbar { height:15px; border-radius:4px; min-width:2px; transition:width .25s; }
+  td.bval { width:64px; text-align:left; color:#9fb3d4; font-size:12px; font-variant-numeric:tabular-nums; }
+  th.rngh { min-width:92px; vertical-align:bottom; }
+  .rngn { font-size:10px; font-weight:600; color:#cfe0f7; white-space:normal; line-height:1.25; max-width:130px; }
   /* ============================================================
      v4.8 — סרגל הבקרה העליון: מתג האוכלוסייה + טווח התאריכים.
      שני אלה נשלפו מפאנל המסננים והועלו לראש כל מסך, כי הם השאלות
