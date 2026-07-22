@@ -86,17 +86,16 @@ function _kpiFacet(f, key, field){ const o=Object.assign({},f); delete o[key];
 function _modeFacet(f){ const o=Object.assign({},f); delete o.mode; const out={};
   ['in','all'].forEach(mode=>{ out[mode]=filterCands(Object.assign({},o,{mode})).length; }); return out; }
 
-// סדרת זמן שבועית לגרף המגמה — "כמה בכל שבוע" לאורך הזמן (שבוע מתחיל ביום
-// ראשון). מקביל ל-_trend_by_week בשרת. idField (רשות) -> ספירת מועמדים
-// ייחודית לצד ספירת האירועים (מסכי האירועים, שם שורה != מועמד).
-function _weekStart(iso){ const d=new Date(iso+'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate()-d.getUTCDay()); return d.toISOString().slice(0,10); }
-function _trendWeek(rows, dateField, idField){
+// סדרת זמן חודשית לגרף המגמה — "כמה בכל חודש" לאורך הזמן (החודש מיוצג
+// בתאריך הראשון שלו). מקביל ל-_trend_by_month בשרת. idField (רשות) -> ספירת
+// מועמדים ייחודית לצד ספירת האירועים (מסכי האירועים, שם שורה != מועמד).
+function _monthStart(iso){ return iso.slice(0,7)+'-01'; }
+function _trendMonth(rows, dateField, idField){
   const m={};
-  rows.forEach(o=>{ const dt=o[dateField]; if(!dt) return; const w=_weekStart(dt);
+  rows.forEach(o=>{ const dt=o[dateField]; if(!dt) return; const w=_monthStart(dt);
     const g=m[w]||(m[w]={count:0, ppl:idField?new Set():null});
     g.count++; if(idField) g.ppl.add(o[idField]); });
-  return Object.keys(m).sort().map(w=>{ const r={week:w, count:m[w].count};
+  return Object.keys(m).sort().map(w=>{ const r={period:w, count:m[w].count};
     if(idField) r.people=m[w].ppl.size; return r; });
 }
 
@@ -128,7 +127,7 @@ function computeKpi(f){
   const roleC={}; rows.forEach(c=>{ roleC[c.role]=(roleC[c.role]||0)+1; });
   const by_role=Object.keys(roleC).map(r=>({role:r,count:roleC[r]})).sort((a,b)=>b.count-a.count);
   return { total, ranges, districts, by_role, stuck90,
-           trend:_trendWeek(rows,'last'),
+           trend:_trendMonth(rows,'last'),
            facets:{ roles:_kpiFacet(f,'roles','role'), districts:_kpiFacet(f,'districts','district'),
                     mode:_modeFacet(f) },
            bounds:BOUNDS };
@@ -194,7 +193,7 @@ function computeEvents(kind, f){
   const all_stages=META.stages.filter(s=>present[s]);
   let mn=null,mx=null; pool.forEach(o=>{ if(mn===null||o.date<mn)mn=o.date; if(mx===null||o.date>mx)mx=o.date; });
   return { label, total:rows.length, people:ppl.size, dedup:(kind==='withdrawals'),
-           no_submission:0, trend:_trendWeek(rows,'date','cid'),
+           no_submission:0, trend:_trendMonth(rows,'date','cid'),
            by_stage:_grp(rows,'stage'), by_district:_grp(rows,'district'),
            by_role:_grp(rows,'role'),
            by_reason:(kind==='stops')?_grp(rows,'reason').slice(0,25):[],
@@ -595,13 +594,14 @@ function barCard(title, rows, labelKey, valKey){
 // computeEvents) ולכן הגרף זז עם המסננים/המתג/הטווח בדיוק כמו העמודות.
 function niceStep(x){ if(x<=0) return 1; const p=Math.pow(10,Math.floor(Math.log10(x)));
   const f=x/p; return (f<=1?1:f<=2?2:f<=5?5:10)*p; }
+function fmtMonth(iso){ if(!iso) return ''; const [y,m]=iso.split('-'); return `${+m}.${y}`; }
 function trendCard(title, points, opts){
   opts=opts||{}; const valKey=opts.valKey||'count', color=opts.color||RANGE_COLORS[0];
-  const pts=(points||[]).filter(p=>p&&p.week&&p[valKey]!=null)
-    .map(p=>({t:Date.parse(p.week+'T00:00:00Z'), v:+p[valKey]||0, ppl:p.people, wk:p.week}));
+  const pts=(points||[]).filter(p=>p&&p.period&&p[valKey]!=null)
+    .map(p=>({t:Date.parse(p.period+'T00:00:00Z'), v:+p[valKey]||0, ppl:p.people, mo:p.period}));
   if(pts.length<2){
     return `<div class="card trendcard"><div class="bartitle">${esc(title)}</div>
-      <div class="tnote">אין מספיק נתונים להצגת מגמה (נדרשים שני שבועות לפחות).</div></div>`;
+      <div class="tnote">אין מספיק נתונים להצגת מגמה (נדרשים שני חודשים לפחות).</div></div>`;
   }
   const W=780,H=230,PL=44,PR=14,PT=16,PB=30;
   const minT=Math.min(...pts.map(p=>p.t)), maxT=Math.max(...pts.map(p=>p.t));
@@ -613,16 +613,17 @@ function trendCard(title, points, opts){
   for(let g=0; g<=top+0.001; g+=step){ const y=Y(g).toFixed(1);
     grid+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" class="tgrid"/>`
         + `<text x="${PL-6}" y="${(+y+3).toFixed(1)}" class="tylab">${nf(g)}</text>`; }
-  let xlab='', seen={};
-  pts.forEach(p=>{ const d=new Date(p.t), key=d.getUTCFullYear()+'-'+d.getUTCMonth();
-    if(seen[key]) return; seen[key]=1;
-    xlab+=`<text x="${X(p.t).toFixed(1)}" y="${H-8}" class="txlab">${d.getUTCDate()}.${d.getUTCMonth()+1}</text>`; });
+  // תווית לכל חודש (כל נקודה היא חודש). דילוג אוטומטי אם צפוף: מציגים כל
+  // חודש כשיש עד 14 נקודות, אחרת כל חודש שני.
+  let xlab='', gap=pts.length>14?2:1;
+  pts.forEach((p,i)=>{ if(i%gap) return;
+    xlab+=`<text x="${X(p.t).toFixed(1)}" y="${H-8}" class="txlab">${fmtMonth(p.mo)}</text>`; });
   const line=pts.map((p,i)=>`${i?'L':'M'}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
   const area=`M${X(pts[0].t).toFixed(1)},${(H-PB).toFixed(1)} `
     + pts.map(p=>`L${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ')
     + ` L${X(pts[pts.length-1].t).toFixed(1)},${(H-PB).toFixed(1)} Z`;
-  const dots=pts.map(p=>{ const tip=fmtDate(p.wk)+' — '+nf(p.v)+(p.ppl!==undefined?' ('+nf(p.ppl)+' מועמדים)':'');
-    return `<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="2.6" fill="${color}"><title>${esc(tip)}</title></circle>`; }).join('');
+  const dots=pts.map(p=>{ const tip=fmtMonth(p.mo)+' — '+nf(p.v)+(p.ppl!==undefined?' ('+nf(p.ppl)+' מועמדים)':'');
+    return `<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3" fill="${color}"><title>${esc(tip)}</title></circle>`; }).join('');
   const gid='tg'+color.replace('#','');
   return `<div class="card trendcard"><div class="bartitle">${esc(title)}</div>
     <svg class="tsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">
@@ -634,7 +635,7 @@ function trendCard(title, points, opts){
       <path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
       ${dots}${xlab}
     </svg>
-    <div class="tnote">ציר הזמן RTL — המוקדם מימין, המאוחר משמאל. מעבר עם העכבר על נקודה מציג את פירוט השבוע.</div>
+    <div class="tnote">ציר הזמן RTL — המוקדם מימין, המאוחר משמאל. מעבר עם העכבר על נקודה מציג את פירוט החודש.</div>
   </div>`;
 }
 function kpiBars(k){
@@ -644,7 +645,7 @@ function kpiBars(k){
     ${barCard('חלוקה למקצועות', k.by_role||[], 'role','count')}
     ${barCard('חלוקה לאגפים', byUnit, 'name','count')}
     ${barCard('חלוקה לטווחי זמן', byRange, 'name','count')}</div>
-    ${trendCard('פעילות מועמדים לאורך זמן (שבועי)', k.trend, {valKey:'count'})}`;
+    ${trendCard('פעילות מועמדים לאורך זמן (חודשי)', k.trend, {valKey:'count'})}`;
 }
 function evBars(d){
   const color = d.dedup ? RANGE_COLORS[3] : RANGE_COLORS[2];  // מסירים כתום · הפסקות צהוב
@@ -652,7 +653,7 @@ function evBars(d){
     ${barCard('חלוקה למקצועות', d.by_role||[], 'role','events')}
     ${barCard('חלוקה לאגפים', d.by_district||[], 'district','events')}
     ${barCard('חלוקה לשלב באירוע', d.by_stage||[], 'stage','events')}</div>
-    ${trendCard((d.label||'אירועים')+' לאורך זמן (שבועי)', d.trend, {valKey:'count', color})}`;
+    ${trendCard((d.label||'אירועים')+' לאורך זמן (חודשי)', d.trend, {valKey:'count', color})}`;
 }
 async function loadManager(){
   const k=await (await fetch('/api/kpi',{method:'POST',headers:{'Content-Type':'application/json'},
